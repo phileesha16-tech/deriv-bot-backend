@@ -91,7 +91,7 @@ app.post('/api/trade', async (req, res) => {
         proposal: 1,
         amount: stake || 1,
         basis: 'stake',
-        contract_type: 'DIGITDIFF',
+        contract_type: 'DIGITMATCH',
         currency: 'USD',
         duration: ticks || 5,
         duration_unit: 't',

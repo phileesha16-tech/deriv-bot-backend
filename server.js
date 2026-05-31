@@ -47,10 +47,24 @@ app.post('/api/otp', async (req, res) => {
 
 // Place trade via server-side WebSocket
 app.post('/api/trade', async (req, res) => {
-  const { wsUrl, digit, stake, ticks, symbol } = req.body;
-  if (!wsUrl) return res.status(400).json({ error: 'wsUrl required' });
+  const { token, accountId, digit, stake, ticks, symbol } = req.body;
+  if (!token || !accountId) return res.status(400).json({ error: 'token and accountId required' });
 
   try {
+    // Get fresh OTP before each trade
+    const fetch = (await import('node-fetch')).default;
+    const otpRes = await fetch(`https://api.derivws.com/trading/v1/options/accounts/${accountId}/otp`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Deriv-App-ID': '33pQNMCqRHLfXUnMSr1ss' }
+    });
+    const otpData = await otpRes.json();
+    if (otpData.errors && otpData.errors.length > 0) {
+      return res.status(400).json({ error: otpData.errors[0].message });
+    }
+    const wsUrl = otpData.data && otpData.data.url;
+    if (!wsUrl) return res.status(400).json({ error: 'Could not get WebSocket URL' });
+    console.log('Trade OTP URL prefix:', wsUrl.substring(0, 50));
+
     const ws = new WebSocket(wsUrl);
     let resolved = false;
 
@@ -114,10 +128,20 @@ app.post('/api/trade', async (req, res) => {
 
 // Check contract result
 app.post('/api/contract-result', async (req, res) => {
-  const { wsUrl, contractId } = req.body;
-  if (!wsUrl || !contractId) return res.status(400).json({ error: 'wsUrl and contractId required' });
+  const { token, accountId, contractId } = req.body;
+  if (!token || !accountId || !contractId) return res.status(400).json({ error: 'token, accountId and contractId required' });
 
   try {
+    // Get fresh OTP
+    const fetch = (await import('node-fetch')).default;
+    const otpRes = await fetch(`https://api.derivws.com/trading/v1/options/accounts/${accountId}/otp`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Deriv-App-ID': '33pQNMCqRHLfXUnMSr1ss' }
+    });
+    const otpData = await otpRes.json();
+    if (!otpData.data || !otpData.data.url) return res.status(400).json({ error: 'Could not get WebSocket URL' });
+    const wsUrl = otpData.data.url;
+
     const ws = new WebSocket(wsUrl);
     let resolved = false;
 
@@ -174,7 +198,9 @@ wss.on('connection', (clientWs, req) => {
     if (clientWs.readyState === WebSocket.OPEN) clientWs.send(data.toString());
   });
   derivWs.on('close', (code, reason) => {
-    if (clientWs.readyState === WebSocket.OPEN) clientWs.close(code, reason);
+    if (clientWs.readyState === WebSocket.OPEN) {
+      try { clientWs.close(typeof code === 'number' ? code : 1000); } catch(e) {}
+    }
   });
   derivWs.on('error', (err) => {
     if (clientWs.readyState === WebSocket.OPEN) clientWs.send(JSON.stringify({ error: err.message }));

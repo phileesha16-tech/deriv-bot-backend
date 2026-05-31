@@ -2113,7 +2113,7 @@
   // Ticker engine (simulated — paused when live ticks active)
   function startTicker() {
     generateTick();
-    setInterval(function() { if (!usingLiveTicks) generateTick(); }, 1000);
+    setInterval(function() { generateTick(); }, 1000);
   }
 
   function generateTick() {
@@ -2741,7 +2741,7 @@
   }
 
   // Backend server URL - update this after deploying to Render.com
-  var BACKEND_URL = 'https://deriv-bot-server.onrender.com';
+  var BACKEND_URL = 'https://deriv-bot-backend-3ue8.onrender.com';
 
   function connectWithPAT(token) {
     var acctType = document.querySelector('input[name="acctType"]:checked');
@@ -3011,7 +3011,7 @@
   }
 
   function applyLiveTick(tickPrice) {
-    usingLiveTicks = true;
+    // usingLiveTicks is set by the WebSocket connection, not by tick arrival
     var priceStr = tickPrice.toFixed(2);
     var lastD = parseInt(priceStr.charAt(priceStr.length - 1), 10);
     var prevPrice = price;

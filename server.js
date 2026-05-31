@@ -86,8 +86,7 @@ app.post('/api/trade', async (req, res) => {
       };
       var mappedSymbol = symbolMap[symbol] || symbol || 'R_100';
       console.log('Trading symbol:', symbol, '->', mappedSymbol);
-
-      ws.send(JSON.stringify({
+      var proposal = {
         proposal: 1,
         amount: stake || 1,
         basis: 'stake',
@@ -97,7 +96,9 @@ app.post('/api/trade', async (req, res) => {
         duration_unit: 't',
         underlying_symbol: mappedSymbol,
         barrier: digit.toString()
-      }));
+      };
+      console.log('Sending proposal:', JSON.stringify(proposal));
+      ws.send(JSON.stringify(proposal));
     });
 
     ws.on('message', (data) => {

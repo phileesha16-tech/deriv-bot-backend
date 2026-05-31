@@ -2112,8 +2112,12 @@
 
   // Ticker engine (simulated — paused when live ticks active)
   function startTicker() {
-    generateTick();
-    setInterval(function() { generateTick(); }, 1000);
+    try { generateTick(); } catch(e) { console.error('generateTick error:', e); }
+    setInterval(function() {
+      if (!usingLiveTicks) {
+        try { generateTick(); } catch(e) { console.error('ticker error:', e); }
+      }
+    }, 1000);
   }
 
   function generateTick() {
@@ -2121,9 +2125,46 @@
                    'R_10_1s': 0.5, 'R_25_1s': 1.0, 'R_50_1s': 1.8, 'R_75_1s': 2.5, 'R_100_1s': 3.2 };
     var vol = volMap[currentSymbol.id] || 2.5;
     var change = (Math.random() - 0.5) * vol;
-    price = Math.max(1000, price + change);
-    // Route through applyLiveTick so bot hooks fire in demo mode too
-    applyLiveTick(price);
+    var newPrice = Math.max(1000, price + change);
+    var priceStr = newPrice.toFixed(2);
+    var lastD = parseInt(priceStr.charAt(priceStr.length - 1), 10);
+    var prevPrice = price;
+    price = newPrice;
+    var priceDiff = price - prevPrice;
+    var pctChange = prevPrice > 0 ? ((priceDiff / prevPrice) * 100).toFixed(4) : '0.0000';
+
+    // Update price display
+    var el = document.getElementById('tickerPrice');
+    if (el) el.innerHTML = priceStr.slice(0,-1) + '<span class="last-digit" id="lastDigit">' + lastD + '</span>';
+
+    // Update change display
+    var changeEl = document.getElementById('tickerChange');
+    if (changeEl) {
+      changeEl.textContent = (priceDiff >= 0 ? '+' : '') + pctChange + '%';
+      changeEl.style.color = priceDiff >= 0 ? 'var(--win)' : 'var(--lose)';
+    }
+
+    // Update digit history
+    digitHistory.unshift(lastD);
+    if (digitHistory.length > 20) digitHistory.pop();
+    recentWindow.unshift(lastD);
+    if (recentWindow.length > windowSize) recentWindow.pop();
+    freqMap[lastD]++;
+
+    renderDigitHistory();
+    updateFreqChart();
+    if (autoPredict) { runPredictor(); }
+    if (contract) { processTick(lastD); }
+
+    // Drive bot in demo mode
+    if (bot && bot.running && !contract) {
+      if (bot.cooldownTick) {
+        bot.cooldownTick = false;
+        setTimeout(function() { if (bot.running && !contract) botPlaceTrade(); }, 300);
+      } else {
+        botPlaceTrade();
+      }
+    }
   }
 
   function renderDigitHistory() {
@@ -3011,10 +3052,9 @@
   }
 
   function applyLiveTick(tickPrice) {
-    // usingLiveTicks is set by the WebSocket connection, not by tick arrival
     var priceStr = tickPrice.toFixed(2);
     var lastD = parseInt(priceStr.charAt(priceStr.length - 1), 10);
-    var prevPrice = price;
+    var prevPrice = price || tickPrice;
     price = tickPrice;
     var change = price - prevPrice;
     var intPart = priceStr.slice(0, -1);

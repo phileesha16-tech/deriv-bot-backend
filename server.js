@@ -86,7 +86,7 @@ app.post('/api/trade', async (req, res) => {
         currency: 'USD',
         duration: ticks || 5,
         duration_unit: 't',
-        underlying: symbol || 'R_100',
+        underlying_symbol: symbol || 'R_100',
         barrier: digit.toString()
       }));
     });

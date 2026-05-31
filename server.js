@@ -78,6 +78,15 @@ app.post('/api/trade', async (req, res) => {
 
     ws.on('open', () => {
       // Send proposal
+      // Map old symbol IDs to new API format
+      var symbolMap = {
+        'R_10': 'R_10', 'R_25': 'R_25', 'R_50': 'R_50', 'R_75': 'R_75', 'R_100': 'R_100',
+        'R_10_1s': '1HZ10V', 'R_25_1s': '1HZ25V', 'R_50_1s': '1HZ50V',
+        'R_75_1s': '1HZ75V', 'R_100_1s': '1HZ100V'
+      };
+      var mappedSymbol = symbolMap[symbol] || symbol || 'R_100';
+      console.log('Trading symbol:', symbol, '->', mappedSymbol);
+
       ws.send(JSON.stringify({
         proposal: 1,
         amount: stake || 1,
@@ -86,7 +95,7 @@ app.post('/api/trade', async (req, res) => {
         currency: 'USD',
         duration: ticks || 5,
         duration_unit: 't',
-        underlying_symbol: symbol || 'R_100',
+        underlying_symbol: mappedSymbol,
         barrier: digit.toString()
       }));
     });

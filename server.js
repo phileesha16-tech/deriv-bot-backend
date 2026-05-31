@@ -185,6 +185,24 @@ app.post('/api/contract-result', async (req, res) => {
   }
 });
 
+// Get account balance
+app.get('/api/balance/:accountId', async (req, res) => {
+  const { token } = req.query;
+  const { accountId } = req.params;
+  if (!token) return res.status(400).json({ error: 'Token required' });
+  try {
+    const fetch = (await import('node-fetch')).default;
+    const response = await fetch(`https://api.derivws.com/trading/v1/options/accounts/${accountId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Deriv-App-ID': '33pQNMCqRHLfXUnMSr1ss'
+      }
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // WebSocket proxy
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server, path: '/ws' });

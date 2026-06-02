@@ -47,7 +47,7 @@ app.post('/api/otp', async (req, res) => {
 
 // Place trade via server-side WebSocket
 app.post('/api/trade', async (req, res) => {
-  const { token, accountId, digit, stake, ticks, symbol } = req.body;
+  const { token, accountId, digit, stake, ticks, symbol, contractType } = req.body;
   if (!token || !accountId) return res.status(400).json({ error: 'token and accountId required' });
 
   try {
@@ -90,7 +90,7 @@ app.post('/api/trade', async (req, res) => {
         proposal: 1,
         amount: stake || 1,
         basis: 'stake',
-        contract_type: 'DIGITMATCH',
+        contract_type: contractType || 'DIGITMATCH',
         currency: 'USD',
         duration: ticks || 5,
         duration_unit: 't',
